@@ -10,6 +10,16 @@
 
 namespace DXFProcessor {
 
+    /**
+     * @brief Reads and parses a DXF file to extract 3D mesh data
+     * 
+     * This is the main entry point for DXF file processing. It validates the file
+     * exists and is readable before delegating to the internal parser.
+     * 
+     * @param filePath Path to the DXF file to process
+     * @return std::unique_ptr<MeshData> Parsed mesh data containing triangles
+     * @throws DXFReaderException if file doesn't exist, isn't readable, or parsing fails
+     */
     std::unique_ptr<MeshData> DXFReader::readFile(const std::string& filePath) {
         if (!std::filesystem::exists(filePath)) {
             throw DXFReaderException("File does not exist: " + filePath);
@@ -22,6 +32,17 @@ namespace DXFProcessor {
         return parseFile(filePath);
     }
 
+    /**
+     * @brief Internal parser that processes DXF file content line by line
+     * 
+     * Uses a robust line-based parsing approach that reads the entire file into memory
+     * first, then processes it sequentially. This eliminates file seeking issues and
+     * provides reliable parsing of DXF code-value pairs.
+     * 
+     * @param filePath Path to the DXF file (already validated)
+     * @return std::unique_ptr<MeshData> Mesh data with all parsed 3DFACE entities
+     * @throws DXFReaderException if file cannot be opened or parsing fails
+     */
     std::unique_ptr<MeshData> DXFReader::parseFile(const std::string& filePath) {
         std::ifstream file(filePath);
         if (!file.is_open()) {
@@ -96,6 +117,16 @@ namespace DXFProcessor {
         return meshData;
     }
 
+    /**
+     * @brief Reads the next DXF code-value pair from file stream
+     * 
+     * DXF files consist of code-value pairs where the code (integer) appears on one line
+     * and its corresponding value appears on the next line.
+     * 
+     * @param file Input file stream positioned at a code line
+     * @param code Reference to DXFCode structure to populate
+     * @return true if code-value pair was successfully read, false on EOF or error
+     */
     bool DXFReader::readNextCode(std::ifstream& file, DXFCode& code) {
         std::string line;
         
@@ -121,6 +152,17 @@ namespace DXFProcessor {
         return true;
     }
 
+    /**
+     * @brief Legacy 3DFACE parser using file stream (deprecated)
+     * 
+     * This method uses file stream operations with seeking, which proved unreliable
+     * for complex DXF files. Kept for compatibility but not used in current implementation.
+     * 
+     * @param file Input file stream positioned after 3DFACE entity marker
+     * @param triangle Reference to Triangle to populate with vertex data
+     * @return true if triangle was successfully parsed
+     * @deprecated Use parse3DFaceFromLines instead
+     */
     bool DXFReader::parse3DFace(std::ifstream& file, Triangle& triangle) {
         DXFCode code;
         Point3D vertices[4];
@@ -190,6 +232,17 @@ namespace DXFProcessor {
         return false;
     }
 
+    /**
+     * @brief Simplified 3DFACE parser with basic error handling
+     * 
+     * An intermediate parsing approach that improved upon the original but still
+     * suffered from file positioning issues. Kept for reference.
+     * 
+     * @param file Input file stream positioned after 3DFACE entity marker
+     * @param triangle Reference to Triangle to populate with vertex data
+     * @return true if triangle was successfully parsed
+     * @deprecated Use parse3DFaceFromLines instead
+     */
     bool DXFReader::parse3DFaceSimple(std::ifstream& file, Triangle& triangle) {
         std::string line;
         Point3D vertices[4];
@@ -268,6 +321,17 @@ namespace DXFProcessor {
         return false;
     }
 
+    /**
+     * @brief Streamlined 3DFACE parser with improved line handling
+     * 
+     * Another iteration of the parsing logic that attempted to fix file positioning
+     * issues but still had reliability problems with large files.
+     * 
+     * @param file Input file stream positioned after 3DFACE entity marker
+     * @param triangle Reference to Triangle to populate with vertex data
+     * @return true if triangle was successfully parsed
+     * @deprecated Use parse3DFaceFromLines instead
+     */
     bool DXFReader::parse3DFaceStreamlined(std::ifstream& file, Triangle& triangle) {
         std::string line;
         Point3D vertices[3];
@@ -344,6 +408,23 @@ namespace DXFProcessor {
         return false;
     }
 
+    /**
+     * @brief Robust 3DFACE parser using pre-loaded lines array
+     * 
+     * This is the current production parser that processes 3DFACE entities from
+     * a pre-loaded array of file lines. It correctly handles DXF code-value pairs
+     * and extracts the first three vertices to form a triangle.
+     * 
+     * DXF 3DFACE format:
+     * - Codes 10,11,12,13: X coordinates for vertices 0,1,2,3
+     * - Codes 20,21,22,23: Y coordinates for vertices 0,1,2,3  
+     * - Codes 30,31,32,33: Z coordinates for vertices 0,1,2,3
+     * 
+     * @param lines Vector of all file lines (trimmed)
+     * @param index Reference to current line index, updated to point past this entity
+     * @param triangle Reference to Triangle to populate with vertex data
+     * @return true if triangle was successfully parsed with all 3 vertices
+     */
     bool DXFReader::parse3DFaceFromLines(const std::vector<std::string>& lines, size_t& index, Triangle& triangle) {
         Point3D vertices[3];
         bool hasVertex[3] = {false, false, false};
@@ -414,6 +495,19 @@ namespace DXFProcessor {
         return false;
     }
 
+    /**
+     * @brief Parses a 3D point from DXF code-value pairs
+     * 
+     * Utility function for extracting 3D coordinates from specific DXF codes.
+     * Used by legacy parsers but not in the current implementation.
+     * 
+     * @param file Input file stream
+     * @param xCode DXF code for X coordinate
+     * @param yCode DXF code for Y coordinate  
+     * @param zCode DXF code for Z coordinate
+     * @return Point3D with extracted coordinates
+     * @deprecated Not used in current line-based parser
+     */
     Point3D DXFReader::parsePoint(std::ifstream& file, int xCode, int yCode, int zCode) {
         Point3D point;
         DXFCode code;
@@ -443,6 +537,14 @@ namespace DXFProcessor {
         return point;
     }
 
+    /**
+     * @brief Reports parsing progress to registered callback
+     * 
+     * Notifies the progress callback (if set) about parsing progress.
+     * Progress is clamped to [0.0, 1.0] range.
+     * 
+     * @param progress Progress value between 0.0 (start) and 1.0 (complete)
+     */
     void DXFReader::reportProgress(double progress) {
         if (progressCallback_) {
             progressCallback_(std::max(0.0, std::min(1.0, progress)));
