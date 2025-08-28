@@ -1,0 +1,54 @@
+  0
+SECTION
+  2
+HEADER
+  9
+$ACADVER
+  1
+AC1027
+  0
+ENDSEC
+  0
+SECTION
+  2
+ENTITIES
+  0
+3DFACE
+  5
+1
+330
+1F
+100
+AcDbEntity
+  8
+0
+100
+AcDbFace
+ 10
+0.0
+ 20
+0.0
+ 30
+0.0
+ 11
+10.0
+ 21
+0.0
+ 31
+0.0
+ 12
+5.0
+ 22
+8.660254
+ 32
+0.0
+ 13
+5.0
+ 23
+8.660254
+ 33
+0.0
+  0
+ENDSEC
+  0
+EOF

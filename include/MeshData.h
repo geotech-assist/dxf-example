@@ -49,10 +49,10 @@ namespace DXFProcessor {
         /**
          * @brief Equality comparison with epsilon tolerance
          * @param other Point to compare against
-         * @return true if points are equal within tolerance (1e-10)
+         * @return true if points are equal within tolerance (1e-9)
          */
         bool operator==(const Point3D& other) const {
-            const double epsilon = 1e-10;
+            const double epsilon = 1e-9;
             return std::abs(x - other.x) < epsilon &&
                    std::abs(y - other.y) < epsilon &&
                    std::abs(z - other.z) < epsilon;
